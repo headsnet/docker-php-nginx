@@ -1,11 +1,11 @@
 ARG NAME_IMAGE_BASE='php'
-ARG NAME_IMAGE_TAG='8.1-fpm-alpine3.16'
+ARG NAME_IMAGE_TAG='8.1-fpm-alpine3.17'
 
 FROM ${NAME_IMAGE_BASE}:${NAME_IMAGE_TAG}
 
 ARG BUILD_ID="unknown"
 ARG COMMIT_ID="unknown"
-ARG VERSION_OS='3.16'
+ARG VERSION_OS='3.17'
 ARG VERSION_PHP='8.1'
 
 LABEL \
@@ -15,56 +15,34 @@ LABEL \
     MAINTAINER='Samuel Fontebasso <samuel.txd@gmail.com>' \
     PHP_VERSION="$VERSION_PHP"
 
+COPY --from=mlocati/php-extension-installer:latest /usr/bin/install-php-extensions /usr/local/bin/
+
 RUN set -ex; \
-    \
-    apk add --no-cache --upgrade git \
-        bzip2-dev \
-        ca-certificates \
-        curl \
-        curl-dev \
-        ghostscript \
-        icu-dev \
-        imagemagick \
-        imagemagick-dev \
-        imagemagick-libs \
-        libjpeg-turbo-dev \
-        libmcrypt-dev \
-        libpng-dev \
-        libressl-dev \
-        libxml2-dev \
-        libzip-dev \
+    apk add --no-cache --upgrade  \
+        icu-data-full \
         nginx \
         nginx-mod-http-headers-more \
         oniguruma-dev \
-        postgresql-dev \
         runit; \
-    apk add --no-cache --virtual build-dependencies build-base gcc wget autoconf linux-headers; \
-    docker-php-ext-install \
+    install-php-extensions \
         bcmath \
-        bz2 \
-        calendar \
-        exif \
-        opcache \
+        gd \
+        imap \
+        intl \
+        mailparse \
         pdo_mysql \
-        shmop \
-        sockets \
-        sysvmsg \
-        sysvsem \
-        sysvshm \
+        redis \
+        tidy \
+        xsl \
         zip; \
-    pecl install imagick; \
-    docker-php-ext-enable --ini-name docker-php-ext-x-01-imagick.ini imagick; \
-    echo "#include <unistd.h>" > /usr/include/sys/unistd.h; \
-    pecl install grpc; \
-    docker-php-ext-enable --ini-name docker-php-ext-x-05-grpc.ini grpc; \
-    pecl install protobuf; \
-    docker-php-ext-enable --ini-name docker-php-ext-x-06-protobuf.ini protobuf; \
     ln -sf /dev/stdout /var/log/nginx/access.log; \
     ln -sf /dev/stderr /var/log/nginx/error.log; \
-    mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"; \
-    apk upgrade tar;
+    mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini";
 
+# Copy service configuration files into the image
 COPY ./src /
+
+# This file allows customisations to PHP.ini
 COPY ./custom_params.ini /usr/local/etc/php/conf.d/docker-php-ext-x-02-custom-params.ini
 
 RUN chmod +x \
